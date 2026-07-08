@@ -108,7 +108,14 @@ export default function UsageLimitsWidget({ onRemove }: { onRemove?: () => void 
   const [syncKey, setSyncKey] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [generatingKey, setGeneratingKey] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedWhich, setCopiedWhich] = useState<"once" | "forever" | null>(null);
+  const [platform, setPlatform] = useState<"windows" | "unix">("windows");
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && !/Win/i.test(navigator.platform || navigator.userAgent)) {
+      setPlatform("unix");
+    }
+  }, []);
 
   // Live data only ever exists on the machine where `claude` is logged in --
   // a Netlify-hosted instance has no local Claude Code session, so it can
@@ -197,9 +204,39 @@ export default function UsageLimitsWidget({ onRemove }: { onRemove?: () => void 
     }
   }
 
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+
   const syncCommand = syncKey
-    ? `curl -O ${typeof window !== "undefined" ? window.location.origin : ""}/sync-claude-usage.mjs && GLANCEBOX_SYNC_KEY=${syncKey} node sync-claude-usage.mjs`
+    ? `curl -O ${origin}/sync-claude-usage.mjs && GLANCEBOX_SYNC_KEY=${syncKey} node sync-claude-usage.mjs`
     : "";
+
+  // "Run forever" commands set up the same thing this project's own machine
+  // uses: a recurring task (Task Scheduler / cron) that re-runs the sync
+  // script every 15 minutes indefinitely, with no terminal left open.
+  const foreverCommandWindows = syncKey
+    ? [
+        `$key = "${syncKey}"`,
+        `$dir = "$env:USERPROFILE\\GlanceBoxSync"`,
+        `New-Item -ItemType Directory -Force -Path $dir | Out-Null`,
+        `Invoke-WebRequest -Uri "${origin}/sync-claude-usage.mjs" -OutFile "$dir\\sync-claude-usage.mjs"`,
+        `$action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c set GLANCEBOX_SYNC_KEY=$key&& node \`"$dir\\sync-claude-usage.mjs\`" >> \`"$dir\\sync-log.txt\`" 2>&1"`,
+        `$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration (New-TimeSpan -Days 3650)`,
+        `Register-ScheduledTask -TaskName "GlanceBoxClaudeUsageSync" -Action $action -Trigger $trigger -Force`,
+      ].join("\n")
+    : "";
+
+  const foreverCommandUnix = syncKey
+    ? `mkdir -p ~/glancebox-sync && curl -s -o ~/glancebox-sync/sync-claude-usage.mjs ${origin}/sync-claude-usage.mjs && (crontab -l 2>/dev/null; echo "*/15 * * * * GLANCEBOX_SYNC_KEY=${syncKey} node ~/glancebox-sync/sync-claude-usage.mjs >> ~/glancebox-sync/sync-log.txt 2>&1") | crontab -`
+    : "";
+
+  const foreverCommand = platform === "windows" ? foreverCommandWindows : foreverCommandUnix;
+
+  function copyToClipboard(text: string, which: "once" | "forever") {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedWhich(which);
+      setTimeout(() => setCopiedWhich(null), 1500);
+    });
+  }
 
   return (
     <WidgetCard eyebrow="Claude Code session" title="Your usage limits" onRemove={onRemove}>
@@ -260,23 +297,56 @@ export default function UsageLimitsWidget({ onRemove }: { onRemove?: () => void 
             )}
             {syncKey && (
               <>
-                <p className="text-warn mb-2">Save this now — it won&apos;t be shown again. Generating a new key retires this one.</p>
-                <div className="flex items-center gap-2 mb-2">
+                <p className="text-warn mb-2">
+                  Save this now — it won&apos;t be shown again. Generating a new key retires this one.
+                </p>
+                <div className="flex items-center gap-2 mb-3">
                   <code className="flex-1 min-w-0 truncate rounded bg-base px-2 py-1 text-ink">{syncKey}</code>
                 </div>
-                <p className="text-faint mb-1">Run this on the machine where Claude Code is logged in:</p>
+
+                <div className="flex items-center gap-2 mb-1.5">
+                  <button
+                    onClick={() => setPlatform("windows")}
+                    className={`px-2 py-0.5 rounded text-[10px] uppercase tracking-wider transition-colors ${
+                      platform === "windows" ? "bg-cyan/15 text-cyan" : "text-faint hover:text-ink"
+                    }`}
+                  >
+                    Windows
+                  </button>
+                  <button
+                    onClick={() => setPlatform("unix")}
+                    className={`px-2 py-0.5 rounded text-[10px] uppercase tracking-wider transition-colors ${
+                      platform === "unix" ? "bg-cyan/15 text-cyan" : "text-faint hover:text-ink"
+                    }`}
+                  >
+                    macOS / Linux
+                  </button>
+                </div>
+                <p className="text-faint mb-1">
+                  Run once on the machine where Claude Code is logged in — sets up a recurring{" "}
+                  {platform === "windows" ? "Task Scheduler job" : "cron job"} that keeps syncing every 15 min,
+                  forever, with no terminal left open:
+                </p>
+                <div className="flex items-start gap-2 mb-3">
+                  <pre className="flex-1 min-w-0 whitespace-pre-wrap break-all rounded bg-base px-2 py-1 text-ink">
+                    {foreverCommand}
+                  </pre>
+                  <button
+                    onClick={() => copyToClipboard(foreverCommand, "forever")}
+                    className="shrink-0 text-cyan hover:text-cyan/80 transition-colors"
+                  >
+                    {copiedWhich === "forever" ? "Copied ✓" : "Copy"}
+                  </button>
+                </div>
+
+                <p className="text-faint mb-1">Or just sync once, manually, whenever you want a fresh reading:</p>
                 <div className="flex items-start gap-2">
                   <code className="flex-1 min-w-0 break-all rounded bg-base px-2 py-1 text-ink">{syncCommand}</code>
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(syncCommand).then(() => {
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 1500);
-                      });
-                    }}
+                    onClick={() => copyToClipboard(syncCommand, "once")}
                     className="shrink-0 text-cyan hover:text-cyan/80 transition-colors"
                   >
-                    {copied ? "Copied ✓" : "Copy"}
+                    {copiedWhich === "once" ? "Copied ✓" : "Copy"}
                   </button>
                 </div>
               </>
