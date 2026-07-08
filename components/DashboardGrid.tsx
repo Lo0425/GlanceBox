@@ -155,7 +155,7 @@ export default function DashboardGrid() {
               <span className="absolute inline-flex h-full w-full rounded-full bg-cyan animate-pulse-glow" />
             </span>
             <div className="text-[11px] tracking-[0.2em] uppercase text-faint font-mono">
-              Console <span className="text-cyan/70">// live</span>
+              GlanceBox <span className="text-cyan/70">// live</span>
             </div>
           </div>
           <h1 className="text-2xl font-display font-bold bg-gradient-to-r from-ink via-ink to-cyan/80 bg-clip-text text-transparent">

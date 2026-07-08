@@ -34,8 +34,9 @@ export default function LoginScreen() {
     setError(null);
     try {
       await signInWithGoogle();
-    } catch {
-      setError("Sign-in failed. Please try again.");
+    } catch (e) {
+      const code = e && typeof e === "object" && "code" in e ? String((e as { code: unknown }).code) : null;
+      setError(code ? `Sign-in failed: ${code}` : "Sign-in failed. Please try again.");
     }
   }
 
@@ -46,10 +47,10 @@ export default function LoginScreen() {
           <span className="relative flex h-1.5 w-1.5">
             <span className="absolute inline-flex h-full w-full rounded-full bg-cyan animate-pulse-glow" />
           </span>
-          <div className="text-[11px] tracking-[0.2em] uppercase text-faint font-mono">Console // locked</div>
+          <div className="text-[11px] tracking-[0.2em] uppercase text-faint font-mono">GlanceBox // locked</div>
         </div>
         <h1 className="text-2xl font-display font-bold bg-gradient-to-r from-ink via-ink to-cyan/80 bg-clip-text text-transparent mb-1">
-          Claude usage dashboard
+          GlanceBox
         </h1>
         <p className="text-sm text-faint mb-6">Sign in to access your dashboard.</p>
         <button

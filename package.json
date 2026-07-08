@@ -1,5 +1,5 @@
 {
-  "name": "claude-usage-dashboard",
+  "name": "glancebox",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -25,5 +25,10 @@
     "postcss": "^8.5.10",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.5.2"
+  },
+  "overrides": {
+    "firebase-admin": {
+      "jwks-rsa": "^3.2.0"
+    }
   }
 }

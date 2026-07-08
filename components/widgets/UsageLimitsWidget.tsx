@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import WidgetCard from "@/components/WidgetCard";
+import { useAuth } from "@/components/AuthProvider";
 import type { UsageLimitsData, UsageLimitWindow } from "@/lib/types";
 
 type Severity = "good" | "amber" | "warn";
@@ -99,24 +100,57 @@ function LimitMeter({
 }
 
 export default function UsageLimitsWidget({ onRemove }: { onRemove?: () => void }) {
+  const { getIdToken } = useAuth();
   const [data, setData] = useState<UsageLimitsData | null>(null);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Live data only ever exists on the machine where `claude` is logged in --
+  // a Netlify-hosted instance has no local Claude Code session, so it can
+  // never see `available: true` from /api/usage-limits directly. Whenever
+  // that route DOES get a live reading, it mirrors it into Firestore (see
+  // that route's mirrorToFirestore); this widget falls back to reading that
+  // mirrored snapshot via /api/user-data so a deployed instance still shows
+  // (slightly stale) real numbers instead of just "unavailable".
+  async function loadOnce(): Promise<UsageLimitsData> {
+    const token = await getIdToken();
+    const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+    try {
+      const res = await fetch("/api/usage-limits", { headers: authHeader });
+      const json: UsageLimitsData = await res.json();
+      if (json.available) return json;
+
+      try {
+        const mirrorRes = await fetch("/api/user-data?key=claudeUsage", { headers: authHeader });
+        const mirrorJson = await mirrorRes.json();
+        const mirrored: UsageLimitsData | null = mirrorJson.value ?? null;
+        if (mirrored?.available && mirrored.asOf) {
+          const minutes = Math.round((Date.now() - new Date(mirrored.asOf).getTime()) / 60_000);
+          const ageLabel = minutes <= 0 ? "under a minute ago" : `${minutes} min ago`;
+          return {
+            ...mirrored,
+            stale: true,
+            note: `Synced from your local machine ${ageLabel}. ${json.note ?? ""}`.trim(),
+          };
+        }
+      } catch {
+        // fall through to the original (unavailable) response
+      }
+
+      return json;
+    } catch {
+      return { available: false, fiveHour: null, sevenDay: null, note: "Couldn't reach the usage-limits API." };
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      try {
-        const res = await fetch("/api/usage-limits");
-        const json: UsageLimitsData = await res.json();
-        if (!cancelled) {
-          setData(json);
-          setLastFetched(new Date());
-        }
-      } catch {
-        if (!cancelled) {
-          setData({ available: false, fiveHour: null, sevenDay: null, note: "Couldn't reach the usage-limits API." });
-        }
+      const json = await loadOnce();
+      if (!cancelled) {
+        setData(json);
+        setLastFetched(new Date());
       }
     }
     load();
@@ -125,20 +159,15 @@ export default function UsageLimitsWidget({ onRemove }: { onRemove?: () => void 
       cancelled = true;
       clearInterval(id);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleManualRefresh() {
     setRefreshing(true);
-    try {
-      const res = await fetch("/api/usage-limits");
-      const json: UsageLimitsData = await res.json();
-      setData(json);
-      setLastFetched(new Date());
-    } catch {
-      setData({ available: false, fiveHour: null, sevenDay: null, note: "Couldn't reach the usage-limits API." });
-    } finally {
-      setRefreshing(false);
-    }
+    const json = await loadOnce();
+    setData(json);
+    setLastFetched(new Date());
+    setRefreshing(false);
   }
 
   return (

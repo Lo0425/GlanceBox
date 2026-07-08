@@ -6,7 +6,17 @@ export const dynamic = "force-dynamic";
 
 // Fixed allowlist -- keys come from request input, so this prevents writing
 // to arbitrary storage paths.
-const ALLOWED_KEYS = new Set(["layout", "defaultLayout", "todos", "notes", "events", "pet", "trips", "assignments"]);
+const ALLOWED_KEYS = new Set([
+  "layout",
+  "defaultLayout",
+  "todos",
+  "notes",
+  "events",
+  "pet",
+  "trips",
+  "assignments",
+  "claudeUsage",
+]);
 
 async function requireUserId(req: NextRequest): Promise<string | null> {
   const authHeader = req.headers.get("authorization");

@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getClaudeAccessToken } from "@/lib/claudeAuth";
+import { getAdminAuth } from "@/lib/firebaseAdmin";
+import { setUserValue } from "@/lib/userStore";
 import type { UsageLimitsData } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -102,7 +104,25 @@ function ageLabel(fetchedAt: number, now: number): string {
   return minutes <= 0 ? "under a minute ago" : `${minutes} min ago`;
 }
 
-export async function GET() {
+// This route can only ever get a live reading on the machine where `claude`
+// is logged in -- there's no local Claude Code session in a Netlify Function.
+// So whenever it *does* succeed, it also mirrors the reading into Firestore
+// under the caller's account, giving the deployed site something to fall
+// back to (see /api/user-data's "claudeUsage" key) instead of just "unavailable".
+async function mirrorToFirestore(req: NextRequest, data: UsageLimitsData, fetchedAt: number) {
+  const authHeader = req.headers.get("authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!token) return;
+
+  try {
+    const decoded = await getAdminAuth().verifyIdToken(token);
+    await setUserValue(decoded.uid, "claudeUsage", { ...data, asOf: new Date(fetchedAt).toISOString() });
+  } catch {
+    // Best-effort only -- a failed mirror shouldn't affect the response.
+  }
+}
+
+export async function GET(req: NextRequest) {
   const now = Date.now();
   const cached = g[globalKey];
 
@@ -121,6 +141,7 @@ export async function GET() {
 
   if (data.available) {
     lastSuccess = { data, fetchedAt: now };
+    await mirrorToFirestore(req, data, now);
   } else if (lastSuccess) {
     // Rather than blank the widget out on every rate limit, keep showing the
     // last real numbers we got -- they're still a useful approximation for a

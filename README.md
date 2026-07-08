@@ -1,4 +1,4 @@
-# Console — Claude Usage Dashboard
+# GlanceBox
 
 A drag-and-drop, resizable dashboard built with Next.js (App Router) showing:
 

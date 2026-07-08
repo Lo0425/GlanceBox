@@ -3,7 +3,7 @@ import AuthProvider from "@/components/AuthProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Console — Claude Usage Dashboard",
+  title: "GlanceBox",
   description: "A drag-and-drop dashboard for your Claude Code usage limits, time, and weather.",
 };
 
