@@ -69,6 +69,26 @@ const DEFAULT_LAYOUT: LayoutItem[] = [
 
 const ALL_WIDGET_IDS = Object.keys(WIDGET_LABELS) as WidgetId[];
 
+// Below these container widths, dragging/resizing a 12-column grid on a
+// touchscreen is fiddly and the columns get too narrow to be useful -- so
+// phone and tablet get a simple, non-draggable stacked layout instead of
+// react-grid-layout. Desktop/laptop keeps the existing full drag-and-resize
+// grid untouched.
+const TABLET_BREAKPOINT = 1024;
+const PHONE_BREAKPOINT = 640;
+const ROW_HEIGHT = 32;
+const ROW_MARGIN = 20;
+// Widgets sized tall on desktop (e.g. todo/notes at h:12) rely on sitting
+// next to other columns to justify that height -- stacked full-width on
+// mobile, that just becomes a wall of empty space above an internally
+// scrollable list. Cap it; the list content itself already scrolls.
+const STACKED_MAX_H = 8;
+
+function stackedPixelHeight(h: number): number {
+  const capped = Math.min(h, STACKED_MAX_H);
+  return capped * ROW_HEIGHT + Math.max(0, capped - 1) * ROW_MARGIN;
+}
+
 const WIDGET_FACTORY: Record<WidgetId, (onRemove: () => void) => React.ReactNode> = {
   clock: (onRemove) => <ClockWidget onRemove={onRemove} />,
   date: (onRemove) => <DateWidget onRemove={onRemove} />,
@@ -90,7 +110,11 @@ export default function DashboardGrid() {
   const [layout, setLayout] = useUserStorage<LayoutItem[]>("layout", DEFAULT_LAYOUT, LEGACY_STORAGE_KEY);
   const [savedDefault, setSavedDefault] = useUserStorage<LayoutItem[] | null>("defaultLayout", null);
   const [justSaved, setJustSaved] = useState(false);
-  const [width, setWidth] = useState(1200);
+  // DashboardGrid only ever mounts client-side (app/page.tsx gates it behind
+  // Firebase auth, which always starts in a "loading" state server-side), so
+  // reading window.innerWidth in the initializer is safe -- no hydration
+  // mismatch, and it avoids a flash of the wrong layout on mobile.
+  const [width, setWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1200));
   const [pickerOpen, setPickerOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
@@ -115,6 +139,13 @@ export default function DashboardGrid() {
   }, [pickerOpen]);
 
   const items = useMemo(() => layout ?? DEFAULT_LAYOUT, [layout]);
+
+  const breakpoint = width < PHONE_BREAKPOINT ? "phone" : width < TABLET_BREAKPOINT ? "tablet" : "desktop";
+
+  // Stacked (non-grid) modes don't have meaningful x/y drag positions, but
+  // still read the stored order top-to-bottom, left-to-right so a layout
+  // arranged on desktop shows up in roughly the same order on mobile.
+  const stackedItems = useMemo(() => [...items].sort((a, b) => a.y - b.y || a.x - b.x), [items]);
 
   const handleLayoutChange = (next: Layout[]) => {
     setLayout(next as LayoutItem[]);
@@ -148,7 +179,7 @@ export default function DashboardGrid() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="relative flex h-1.5 w-1.5">
@@ -158,11 +189,11 @@ export default function DashboardGrid() {
               GlanceBox <span className="text-cyan/70">// live</span>
             </div>
           </div>
-          <h1 className="text-2xl font-display font-bold bg-gradient-to-r from-ink via-ink to-cyan/80 bg-clip-text text-transparent">
+          <h1 className="text-xl sm:text-2xl font-display font-bold bg-gradient-to-r from-ink via-ink to-cyan/80 bg-clip-text text-transparent">
             {dashboardTitle}
           </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="relative" ref={pickerRef}>
             <button
               onClick={() => setPickerOpen((v) => !v)}
@@ -171,7 +202,7 @@ export default function DashboardGrid() {
               + Add widget
             </button>
             {pickerOpen && (
-              <div className="absolute right-0 mt-2 w-56 rounded-lg border border-hairline bg-surface/95 backdrop-blur-md shadow-glow-cyan overflow-hidden z-10">
+              <div className="absolute right-0 mt-2 w-56 max-w-[80vw] rounded-lg border border-hairline bg-surface/95 backdrop-blur-md shadow-glow-cyan overflow-hidden z-10">
                 {availableToAdd.length === 0 && (
                   <div className="px-3 py-2 text-xs text-faint font-mono">All widgets added</div>
                 )}
@@ -205,21 +236,36 @@ export default function DashboardGrid() {
       </div>
 
       <div id="grid-container">
-        <GridLayout
-          className="layout"
-          layout={items}
-          cols={12}
-          rowHeight={32}
-          width={width}
-          margin={[20, 20]}
-          draggableHandle=".widget-drag-handle"
-          onLayoutChange={handleLayoutChange}
-          compactType="vertical"
-        >
-          {items.map((item) => (
-            <div key={item.i}>{WIDGET_FACTORY[item.i](() => removeWidget(item.i))}</div>
-          ))}
-        </GridLayout>
+        {breakpoint === "desktop" ? (
+          <GridLayout
+            className="layout"
+            layout={items}
+            cols={12}
+            rowHeight={ROW_HEIGHT}
+            width={width}
+            margin={[20, 20]}
+            draggableHandle=".widget-drag-handle"
+            onLayoutChange={handleLayoutChange}
+            compactType="vertical"
+          >
+            {items.map((item) => (
+              <div key={item.i}>{WIDGET_FACTORY[item.i](() => removeWidget(item.i))}</div>
+            ))}
+          </GridLayout>
+        ) : (
+          // Phone/tablet: dragging and resizing a narrow multi-column grid on
+          // a touchscreen is more frustrating than useful, so widgets just
+          // stack in their stored reading order instead. Still uses each
+          // widget's stored height so proportions roughly match the desktop
+          // arrangement.
+          <div className={breakpoint === "tablet" ? "grid grid-cols-2 gap-5" : "flex flex-col gap-5"}>
+            {stackedItems.map((item) => (
+              <div key={item.i} style={{ height: stackedPixelHeight(item.h) }}>
+                {WIDGET_FACTORY[item.i](() => removeWidget(item.i))}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
