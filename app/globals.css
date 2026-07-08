@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: -apple-system, "Segoe UI Semibold", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-body: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: #14161A;
+  background-image:
+    radial-gradient(ellipse 900px 600px at 12% 0%, rgba(79, 224, 214, 0.07), transparent),
+    radial-gradient(ellipse 800px 550px at 100% 100%, rgba(139, 124, 240, 0.06), transparent),
+    linear-gradient(rgba(43, 47, 55, 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(43, 47, 55, 0.5) 1px, transparent 1px),
+    radial-gradient(circle, #262a32 1.2px, transparent 1.2px);
+  /* The two glow layers are viewport-fixed, not document-fixed, so they stay
+     anchored to the screen corners instead of landing at some percentage of
+     the (unbounded, growable) page height and creating a visible edge. */
+  background-attachment: fixed, fixed, scroll, scroll, scroll;
+  background-size: auto, auto, 96px 96px, 96px 96px, 24px 24px;
+  color: #ECEDEF;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #4a5563 transparent;
+}
+
+:focus-visible {
+  outline: 2px solid #4FE0D6;
+  outline-offset: 2px;
+}
+
+/* Dragging/resizing a grid item moves the mouse across sibling widgets --
+   without this, the browser reads that as a text-selection drag and
+   highlights whatever it passes over. Form fields opt back in so typing/
+   selecting text inside them still works normally. */
+.react-grid-layout {
+  user-select: none;
+}
+
+.react-grid-layout input,
+.react-grid-layout textarea {
+  user-select: text;
+}
+
+/* react-grid-layout structural overrides so it fits the control-panel look */
+.react-grid-item.react-grid-placeholder {
+  background: #4FE0D6 !important;
+  opacity: 0.1 !important;
+  border: 1px dashed rgba(79, 224, 214, 0.5);
+  border-radius: 14px;
+}
+
+.react-grid-item > .react-resizable-handle {
+  width: 18px;
+  height: 18px;
+  right: 2px;
+  bottom: 2px;
+}
+
+.react-grid-item > .react-resizable-handle::after {
+  border-right: 2px solid #5B606A;
+  border-bottom: 2px solid #5B606A;
+  right: 5px;
+  bottom: 5px;
+  width: 7px;
+  height: 7px;
+}
+
+.react-grid-item.resizing {
+  opacity: 0.85;
+}
+
+.react-grid-item.react-draggable-dragging {
+  z-index: 20;
+  box-shadow: 0 0 0 1px rgba(79, 224, 214, 0.4), 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 32px rgba(79, 224, 214, 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-grid-item {
+    transition: none !important;
+  }
+}
