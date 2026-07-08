@@ -104,6 +104,11 @@ export default function UsageLimitsWidget({ onRemove }: { onRemove?: () => void 
   const [data, setData] = useState<UsageLimitsData | null>(null);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
+  const [syncKey, setSyncKey] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Live data only ever exists on the machine where `claude` is logged in --
   // a Netlify-hosted instance has no local Claude Code session, so it can
@@ -170,6 +175,32 @@ export default function UsageLimitsWidget({ onRemove }: { onRemove?: () => void 
     setRefreshing(false);
   }
 
+  // Generates a hashed, revocable sync key so a local script (see
+  // public/sync-claude-usage.mjs) can push usage numbers into this account
+  // without ever handing GlanceBox the user's actual Claude credentials.
+  async function handleGenerateSyncKey() {
+    setGeneratingKey(true);
+    setSyncError(null);
+    try {
+      const token = await getIdToken();
+      const res = await fetch("/api/sync-key", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error();
+      const json = await res.json();
+      setSyncKey(json.key);
+    } catch {
+      setSyncError("Couldn't generate a sync key. Please try again.");
+    } finally {
+      setGeneratingKey(false);
+    }
+  }
+
+  const syncCommand = syncKey
+    ? `curl -O ${typeof window !== "undefined" ? window.location.origin : ""}/sync-claude-usage.mjs && GLANCEBOX_SYNC_KEY=${syncKey} node sync-claude-usage.mjs`
+    : "";
+
   return (
     <WidgetCard eyebrow="Claude Code session" title="Your usage limits" onRemove={onRemove}>
       <div className="h-full flex flex-col gap-5">
@@ -192,14 +223,66 @@ export default function UsageLimitsWidget({ onRemove }: { onRemove?: () => void 
                 ? `Updated ${lastFetched.toLocaleTimeString()}`
                 : ""}
           </span>
-          <button
-            onClick={handleManualRefresh}
-            disabled={refreshing}
-            className="text-[10px] font-mono text-faint hover:text-cyan transition-colors disabled:opacity-40"
-          >
-            {refreshing ? "Refreshing…" : "↻ Refresh"}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSyncOpen((v) => !v)}
+              className="text-[10px] font-mono text-faint hover:text-cyan transition-colors"
+            >
+              {syncOpen ? "Hide sync" : "Sync from another device"}
+            </button>
+            <button
+              onClick={handleManualRefresh}
+              disabled={refreshing}
+              className="text-[10px] font-mono text-faint hover:text-cyan transition-colors disabled:opacity-40"
+            >
+              {refreshing ? "Refreshing…" : "↻ Refresh"}
+            </button>
+          </div>
         </div>
+
+        {syncOpen && (
+          <div className="rounded-lg border border-hairline bg-surfaceRaised/40 p-3 text-[11px] font-mono leading-snug">
+            {!syncKey && (
+              <>
+                <p className="text-faint mb-2">
+                  Run a small local script on any machine to sync its Claude Code usage into this account. Your
+                  Claude credentials never leave that machine — only the usage numbers are sent.
+                </p>
+                <button
+                  onClick={handleGenerateSyncKey}
+                  disabled={generatingKey}
+                  className="text-cyan hover:text-cyan/80 transition-colors disabled:opacity-40"
+                >
+                  {generatingKey ? "Generating…" : "Generate sync key →"}
+                </button>
+                {syncError && <p className="mt-2 text-warn">{syncError}</p>}
+              </>
+            )}
+            {syncKey && (
+              <>
+                <p className="text-warn mb-2">Save this now — it won&apos;t be shown again. Generating a new key retires this one.</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <code className="flex-1 min-w-0 truncate rounded bg-base px-2 py-1 text-ink">{syncKey}</code>
+                </div>
+                <p className="text-faint mb-1">Run this on the machine where Claude Code is logged in:</p>
+                <div className="flex items-start gap-2">
+                  <code className="flex-1 min-w-0 break-all rounded bg-base px-2 py-1 text-ink">{syncCommand}</code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(syncCommand).then(() => {
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1500);
+                      });
+                    }}
+                    className="shrink-0 text-cyan hover:text-cyan/80 transition-colors"
+                  >
+                    {copied ? "Copied ✓" : "Copy"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </WidgetCard>
   );

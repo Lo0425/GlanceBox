@@ -23,6 +23,8 @@ Required env vars go in `.env.local` (no `.env.local.example` is currently prese
 
 The "Your usage limits" widget doesn't use an env var — it reads an OAuth token directly from the local Claude Code CLI's credentials file (see below), so it only shows real data when run on a machine where `claude` has been logged in.
 
+`firebase-admin`'s dependency `jwks-rsa@4.x` pulls in `jose@6.x`, a pure-ESM package that `jwks-rsa` loads via a plain CJS `require()` — this crashes with `ERR_REQUIRE_ESM` on Netlify's Node runtime. `package.json` has an `overrides` entry pinning `jwks-rsa` to `^3.2.0` (which depends on the dual CJS/ESM `jose@4.x`) to work around it. Don't remove this override without confirming the underlying `jwks-rsa`/`jose` incompatibility has been fixed upstream.
+
 ## Architecture
 
 This is a Next.js App Router dashboard of draggable/resizable widgets (`react-grid-layout`), gated behind Google sign-in via Firebase Authentication, where each widget's data persists per-user in Firestore instead of in `localStorage`.
@@ -49,12 +51,23 @@ This is a Next.js App Router dashboard of draggable/resizable widgets (`react-gr
 
 All routes are `export const dynamic = "force-dynamic"` since they're either user-scoped or poll live external state. Notable patterns to follow when adding similar routes:
 
-- **`usage-limits/route.ts`**: calls Anthropic's *undocumented* `api/oauth/usage` endpoint using the local Claude Code CLI's OAuth token (via `lib/claudeAuth.ts`, which reads `~/.claude/.credentials.json` fresh on every call — it does not attempt to refresh tokens itself). Implements its own exponential backoff and last-known-good caching on `globalThis` (keyed by a `__usageLimitsCache__`-style global) to survive rate limits shared with other tools using the same login. Follow this cache-on-`globalThis` pattern for any other route that polls a rate-limited/undocumented external API.
+- **`usage-limits/route.ts`**: calls Anthropic's *undocumented* `api/oauth/usage` endpoint using the local Claude Code CLI's OAuth token (via `lib/claudeAuth.ts`, which reads `~/.claude/.credentials.json` fresh on every call — it does not attempt to refresh tokens itself). Implements its own exponential backoff and last-known-good caching on `globalThis` (keyed by a `__usageLimitsCache__`-style global) to survive rate limits shared with other tools using the same login. Follow this cache-on-`globalThis` pattern for any other route that polls a rate-limited/undocumented external API. When it gets a genuinely live reading (only possible on the machine where `claude` is logged in — never on a deployed instance), it also mirrors that reading into Firestore under the caller's account (if a Firebase ID token was sent) so a deployed instance has something to fall back to.
 - **`system/route.ts`**: samples CPU/RAM/network on background `setInterval`/`setTimeout` loops stored on `globalThis` (so Next.js dev's hot-reload doesn't spawn duplicate timers), and `GET` just reads the cache — this keeps the route safe to poll rapidly. Network stats shell out to PowerShell via `execFile` with an argv array (not a shell string) on Windows only.
 - **`news/route.ts`**: simple pass-through/aggregation of the Hacker News public API, no auth or caching needed.
 - **`user-data/route.ts`**: see Auth section above.
+- **`sync-key/route.ts`** / **`sync-claude-usage/route.ts`**: see "Cross-device Claude usage sync" below.
 
 When adding a new external-data widget, prefer this shape: a server route under `app/api/<name>/route.ts` that owns caching/backoff/auth concerns, and a client widget component that just polls it and renders `available`/`note`/loading states — don't call third-party or credential-gated APIs directly from client components.
+
+### Cross-device Claude usage sync
+
+Anthropic exposes no public API for a personal Claude Pro/Max account's usage percentage — it only exists via the undocumented endpoint above, authenticated with a local Claude Code session. To let the "Your usage limits" widget show real numbers on a machine other than the one running `claude` (e.g. a deployed instance, or a second computer), without ever having the server store anyone's actual Claude credentials:
+
+- `lib/syncKeys.ts` issues opaque `gbx_`-prefixed keys and stores only their SHA-256 hash in a top-level `syncKeys/{hash}` Firestore collection (→ `{ uid, createdAt }`) — the same "hash what you verify, never store what you must reverse" pattern as a GitHub personal access token. Generating a new key for a user deletes their previous one (single live key per user).
+- `POST /api/sync-key` (Firebase ID token required) issues a key for the signed-in user, called from the widget's "Sync from another device" panel.
+- `POST /api/sync-claude-usage` (sync key required, via `resolveSyncKey`) is a deliberately narrow, separate endpoint from `/api/user-data` — it can only ever write the `claudeUsage` value, nothing else. A leaked sync key can at worst spoof fake usage numbers on that account, not touch todos/notes/layout.
+- `public/sync-claude-usage.mjs` is a standalone, dependency-free Node script (served as a static file, so it's fetchable via `curl <site>/sync-claude-usage.mjs` without cloning the repo) that reads the local Claude Code session, calls the usage endpoint itself, and POSTs only the resulting numbers to `/api/sync-claude-usage` with the sync key — the actual Claude credential never leaves the machine it's read on. Keep this script dependency-free and copy-pasteable; don't make it import from `lib/`.
+- The widget's polling (`UsageLimitsWidget.tsx`) tries live data first, then falls back to reading the mirrored/synced snapshot via `/api/user-data?key=claudeUsage`, marking it `stale` with an `asOf` timestamp either way (`UsageLimitsData` already has these fields for this purpose).
 
 ### Styling
 
