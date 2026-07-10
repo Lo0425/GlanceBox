@@ -8,3 +8,7 @@ tsconfig.tsbuildinfo
 
 # Local Netlify folder
 .netlify
+
+# Scratch/debug files from AI-assisted sessions -- never meant to be committed
+.tmp-*
+app/tmp-*
