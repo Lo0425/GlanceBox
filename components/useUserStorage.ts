@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { getCached, setCached } from "@/lib/clientCache";
 
 // Persists a value under the signed-in user's account (via /api/user-data)
 // instead of the browser's localStorage, so it follows the user across
@@ -10,7 +11,11 @@ import { useAuth } from "@/components/AuthProvider";
 // key so existing data isn't lost when a widget switches over to this hook.
 export function useUserStorage<T>(key: string, defaultValue: T, legacyKey?: string) {
   const { status, getIdToken } = useAuth();
-  const [value, setValue] = useState<T | null>(null);
+  // Seeding from the cross-remount cache (see lib/clientCache) means a
+  // widget that gets unmounted and remounted -- e.g. DashboardGrid swapping
+  // layouts at a responsive breakpoint -- repaints with its last-known value
+  // immediately instead of flashing back to empty while it refetches.
+  const [value, setValue] = useState<T | null>(() => getCached<T>(key) ?? null);
   const loadedRef = useRef(false);
 
   useEffect(() => {
@@ -79,6 +84,14 @@ export function useUserStorage<T>(key: string, defaultValue: T, legacyKey?: stri
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, key, status]);
+
+  // Keeps the cross-remount cache current with every value this hook ever
+  // reaches, whether from the initial fetch, the legacy migration, or a
+  // widget-driven edit -- so the *next* remount (not just this one) repaints
+  // from the latest state instead of whatever was cached before it.
+  useEffect(() => {
+    if (value !== null) setCached(key, value);
+  }, [key, value]);
 
   return [value, setValue] as const;
 }

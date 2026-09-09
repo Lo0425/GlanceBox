@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import WidgetCard from "@/components/WidgetCard";
 import { useAuth } from "@/components/AuthProvider";
 import ClaudeSyncModal from "@/components/widgets/ClaudeSyncModal";
+import { getCached, setCached } from "@/lib/clientCache";
 import type { UsageLimitsData, UsageLimitWindow } from "@/lib/types";
+
+const CACHE_KEY = "usageLimits";
 
 type Severity = "good" | "amber" | "warn";
 
@@ -102,7 +105,10 @@ function LimitMeter({
 
 export default function UsageLimitsWidget({ onRemove }: { onRemove?: () => void }) {
   const { getIdToken } = useAuth();
-  const [data, setData] = useState<UsageLimitsData | null>(null);
+  // Seeded from the last fetch so a remount (e.g. DashboardGrid swapping
+  // layouts at a responsive breakpoint) repaints instantly instead of
+  // flashing back to "Loading..." while it refetches.
+  const [data, setData] = useState<UsageLimitsData | null>(() => getCached(CACHE_KEY) ?? null);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
@@ -152,6 +158,7 @@ export default function UsageLimitsWidget({ onRemove }: { onRemove?: () => void 
       const json = await loadOnce();
       if (!cancelled) {
         setData(json);
+        setCached(CACHE_KEY, json);
         setLastFetched(new Date());
       }
     }
@@ -168,6 +175,7 @@ export default function UsageLimitsWidget({ onRemove }: { onRemove?: () => void 
     setRefreshing(true);
     const json = await loadOnce();
     setData(json);
+    setCached(CACHE_KEY, json);
     setLastFetched(new Date());
     setRefreshing(false);
   }

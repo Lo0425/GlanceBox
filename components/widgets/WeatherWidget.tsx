@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import WidgetCard from "@/components/WidgetCard";
 import { weatherIcon, weatherLabel } from "@/lib/weatherCodes";
+import { getCached, setCached } from "@/lib/clientCache";
 import type { WeatherData } from "@/lib/types";
+
+const CACHE_KEY = "weather";
 
 const DEFAULT_LAT = Number(process.env.NEXT_PUBLIC_DEFAULT_LAT ?? 1.4927);
 const DEFAULT_LON = Number(process.env.NEXT_PUBLIC_DEFAULT_LON ?? 103.7414);
@@ -70,8 +73,12 @@ function Icon({ kind }: { kind: ReturnType<typeof weatherIcon> }) {
 }
 
 export default function WeatherWidget({ onRemove }: { onRemove?: () => void }) {
-  const [data, setData] = useState<WeatherData | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  // Seeded from the last fetch so a remount (e.g. DashboardGrid swapping
+  // layouts at a responsive breakpoint) repaints instantly instead of
+  // flashing back to "Fetching conditions..." while it refetches.
+  const cached = getCached<WeatherData>(CACHE_KEY);
+  const [data, setData] = useState<WeatherData | null>(cached ?? null);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(cached ? "ready" : "loading");
 
   useEffect(() => {
     let cancelled = false;
@@ -99,12 +106,14 @@ export default function WeatherWidget({ onRemove }: { onRemove?: () => void }) {
           city = cityJson.city || cityJson.locality || fallbackCity;
         }
 
-        setData({
+        const fresh: WeatherData = {
           temperatureC: weatherJson.current.temperature_2m,
           weatherCode: weatherJson.current.weather_code,
           isDay: weatherJson.current.is_day === 1,
           city,
-        });
+        };
+        setData(fresh);
+        setCached(CACHE_KEY, fresh);
         setStatus("ready");
       } catch {
         if (!cancelled) setStatus("error");

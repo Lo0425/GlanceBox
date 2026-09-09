@@ -84,6 +84,16 @@ const ROW_MARGIN = 20;
 // scrollable list. Cap it; the list content itself already scrolls.
 const STACKED_MAX_H = 8;
 
+// Widgets whose content is an unbounded list (todos, upcoming events, news
+// headlines, trips/assignments) can easily hold more items than fit in the
+// capped height above -- on desktop that's fine because the user can just
+// resize the grid item, but stacked mode has no resize handle at all, so a
+// fixed height there silently hides real data behind a tiny, easy-to-miss
+// nested scrollbar. For these, stackedPixelHeight is used as a floor
+// (minHeight) instead of a hard cap (height), so the widget grows to show
+// everything and the *page* scrolls instead of a nested box.
+const STACKED_FLEXIBLE_HEIGHT = new Set<WidgetId>(["todo", "calendar", "news", "trips"]);
+
 function stackedPixelHeight(h: number): number {
   const capped = Math.min(h, STACKED_MAX_H);
   return capped * ROW_HEIGHT + Math.max(0, capped - 1) * ROW_MARGIN;
@@ -259,11 +269,15 @@ export default function DashboardGrid() {
           // widget's stored height so proportions roughly match the desktop
           // arrangement.
           <div className={breakpoint === "tablet" ? "grid grid-cols-2 gap-5" : "flex flex-col gap-5"}>
-            {stackedItems.map((item) => (
-              <div key={item.i} style={{ height: stackedPixelHeight(item.h) }}>
-                {WIDGET_FACTORY[item.i](() => removeWidget(item.i))}
-              </div>
-            ))}
+            {stackedItems.map((item) => {
+              const px = stackedPixelHeight(item.h);
+              const style = STACKED_FLEXIBLE_HEIGHT.has(item.i) ? { minHeight: px } : { height: px };
+              return (
+                <div key={item.i} style={style}>
+                  {WIDGET_FACTORY[item.i](() => removeWidget(item.i))}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

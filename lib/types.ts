@@ -34,6 +34,7 @@ export interface TodoItem {
   id: string;
   text: string;
   done: boolean;
+  archived?: boolean;
 }
 
 export interface EventItem {

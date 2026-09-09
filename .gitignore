@@ -12,3 +12,6 @@ tsconfig.tsbuildinfo
 # Scratch/debug files from AI-assisted sessions -- never meant to be committed
 .tmp-*
 app/tmp-*
+
+# Auto-start dev server logs
+logs/

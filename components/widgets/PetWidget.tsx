@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import WidgetCard from "@/components/WidgetCard";
+import { getCached, setCached } from "@/lib/clientCache";
 
 const LEGACY_STORAGE_KEY = "console-dashboard-pet-v1";
+const CACHE_KEY = "pet";
 const SPECIES = ["🐱", "🐶", "🐹", "🐲", "🐧"];
 const SLEEP_ENERGY_THRESHOLD = 25;
 
@@ -69,7 +71,10 @@ function StatBar({ label, value, color }: { label: string; value: number; color:
 
 export default function PetWidget({ onRemove }: { onRemove?: () => void }) {
   const { status, getIdToken } = useAuth();
-  const [pet, setPet] = useState<PetState | null>(null);
+  // Seeded from the last load so a remount (e.g. DashboardGrid swapping
+  // layouts at a responsive breakpoint) repaints instantly instead of
+  // flashing back to "Loading..." while it refetches.
+  const [pet, setPet] = useState<PetState | null>(() => getCached(CACHE_KEY) ?? null);
   const [pos, setPos] = useState<Pos>({ x: 50, y: 50 });
   const [facing, setFacing] = useState<1 | -1>(1);
   const [bounce, setBounce] = useState(false);
@@ -138,6 +143,13 @@ export default function PetWidget({ onRemove }: { onRemove?: () => void }) {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pet, status]);
+
+  // Keeps the cross-remount cache current with every pet state this widget
+  // ever reaches (initial load, decay ticks, feed/play/rest/etc.) so the
+  // *next* remount repaints from the latest state instead of a stale one.
+  useEffect(() => {
+    if (pet) setCached(CACHE_KEY, pet);
+  }, [pet]);
 
   useEffect(() => {
     const id = setInterval(() => setPet((p) => (p ? applyDecay(p, Date.now()) : p)), 15_000);

@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import WidgetCard from "@/components/WidgetCard";
+import { getCached, setCached } from "@/lib/clientCache";
 import type { SystemStats } from "@/lib/types";
+
+const CACHE_KEY = "system";
 
 function barColor(pct: number): string {
   if (pct >= 90) return "bg-warn";
@@ -28,7 +31,10 @@ function StatBar({ label, pct, detail }: { label: string; pct: number | null; de
 }
 
 export default function SystemWidget({ onRemove }: { onRemove?: () => void }) {
-  const [data, setData] = useState<SystemStats | null>(null);
+  // Seeded from the last poll so a remount (e.g. DashboardGrid swapping
+  // layouts at a responsive breakpoint) repaints instantly instead of
+  // flashing back to empty bars while it refetches.
+  const [data, setData] = useState<SystemStats | null>(() => getCached(CACHE_KEY) ?? null);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,7 +42,10 @@ export default function SystemWidget({ onRemove }: { onRemove?: () => void }) {
       try {
         const res = await fetch("/api/system");
         const json: SystemStats = await res.json();
-        if (!cancelled) setData(json);
+        if (!cancelled) {
+          setData(json);
+          setCached(CACHE_KEY, json);
+        }
       } catch {
         if (!cancelled) {
           setData({

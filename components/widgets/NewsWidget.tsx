@@ -2,10 +2,16 @@
 
 import { useEffect, useState } from "react";
 import WidgetCard from "@/components/WidgetCard";
+import { getCached, setCached } from "@/lib/clientCache";
 import type { NewsData } from "@/lib/types";
 
+const CACHE_KEY = "news";
+
 export default function NewsWidget({ onRemove }: { onRemove?: () => void }) {
-  const [data, setData] = useState<NewsData | null>(null);
+  // Seeded from the last fetch so a remount (e.g. DashboardGrid swapping
+  // layouts at a responsive breakpoint) repaints instantly instead of
+  // flashing back to "Loading..." while it refetches.
+  const [data, setData] = useState<NewsData | null>(() => getCached(CACHE_KEY) ?? null);
 
   useEffect(() => {
     let cancelled = false;
@@ -13,7 +19,10 @@ export default function NewsWidget({ onRemove }: { onRemove?: () => void }) {
       try {
         const res = await fetch("/api/news");
         const json: NewsData = await res.json();
-        if (!cancelled) setData(json);
+        if (!cancelled) {
+          setData(json);
+          setCached(CACHE_KEY, json);
+        }
       } catch {
         if (!cancelled) setData({ available: false, items: [], note: "Couldn't load headlines." });
       }
