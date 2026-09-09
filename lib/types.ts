@@ -9,7 +9,7 @@ export type WidgetId =
   | "system"
   | "news"
   | "calculator"
-  | "pet"
+  | "aquarium"
   | "usageLimits"
   | "trips";
 

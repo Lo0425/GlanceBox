@@ -5,7 +5,7 @@ A drag-and-drop, resizable dashboard built with Next.js (App Router) showing:
 - **Clock** — live local time
 - **Date** — today's date + progress through the year
 - **Weather** — live temperature and conditions for your location (via browser geolocation), no API key needed
-- **Your usage limits** — Claude Code's 5-hour / 7-day usage limits, plus To-do, Notes, Calendar, Pomodoro, System monitor, News, Calculator, Pet, and Trips widgets
+- **Your usage limits** — Claude Code's 5-hour / 7-day usage limits, plus To-do, Notes, Calendar, Pomodoro, System monitor, News, Calculator, Aquarium, and Trips widgets
 
 Sign in with Google (via Firebase Authentication) to use the dashboard. Drag any widget by its header to rearrange it, or drag the bottom-right corner to resize. Your layout and widget data (todos, notes, etc.) are saved automatically to Firestore, scoped to your account. Click **Reset layout** to go back to the default arrangement.
 
@@ -50,7 +50,7 @@ components/
   DashboardGrid.tsx      react-grid-layout wiring + per-user persistence
   WidgetCard.tsx         Shared card chrome + drag handle
   useUserStorage.ts      Hook: persists widget state to Firestore via /api/user-data
-  widgets/               One component per widget (Clock, Date, Weather, Todo, Notes, Pet, Trips, ...)
+  widgets/               One component per widget (Clock, Date, Weather, Todo, Notes, Aquarium, Trips, ...)
 lib/
   firebaseClient.ts      Firebase Web SDK (lazy-initialized), used client-side
   firebaseAdmin.ts        Firebase Admin SDK (lazy-initialized), used server-side only

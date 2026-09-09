@@ -16,7 +16,7 @@ import PomodoroWidget from "@/components/widgets/PomodoroWidget";
 import SystemWidget from "@/components/widgets/SystemWidget";
 import NewsWidget from "@/components/widgets/NewsWidget";
 import CalculatorWidget from "@/components/widgets/CalculatorWidget";
-import PetWidget from "@/components/widgets/PetWidget";
+import AquariumWidget from "@/components/widgets/AquariumWidget";
 import UsageLimitsWidget from "@/components/widgets/UsageLimitsWidget";
 import TripsWidget from "@/components/widgets/TripsWidget";
 import UserMenu from "@/components/UserMenu";
@@ -35,7 +35,7 @@ const WIDGET_LABELS: Record<WidgetId, string> = {
   system: "System monitor",
   news: "News headlines",
   calculator: "Calculator",
-  pet: "Virtual pet",
+  aquarium: "Aquarium",
   usageLimits: "Your usage limits",
   trips: "Trips & Deadlines",
 };
@@ -51,7 +51,7 @@ const WIDGET_DEFAULT_SIZE: Record<WidgetId, Pick<LayoutItem, "w" | "h" | "minW" 
   system: { w: 3, h: 5, minW: 3, minH: 4 },
   news: { w: 4, h: 6, minW: 3, minH: 4 },
   calculator: { w: 4, h: 8, minW: 3, minH: 7 },
-  pet: { w: 5, h: 8, minW: 4, minH: 7 },
+  aquarium: { w: 5, h: 8, minW: 4, minH: 7 },
   usageLimits: { w: 3, h: 6, minW: 3, minH: 5 },
   trips: { w: 4, h: 11, minW: 3, minH: 8 },
 };
@@ -68,6 +68,13 @@ const DEFAULT_LAYOUT: LayoutItem[] = [
 ];
 
 const ALL_WIDGET_IDS = Object.keys(WIDGET_LABELS) as WidgetId[];
+
+// The virtual-pet widget was replaced by the aquarium -- rewrite any
+// previously saved layout slot so it keeps its old position/size instead of
+// silently disappearing (WIDGET_FACTORY no longer has a "pet" entry).
+function migrateLayout(list: LayoutItem[]): LayoutItem[] {
+  return list.map((item) => ((item.i as string) === "pet" ? { ...item, i: "aquarium" as WidgetId } : item));
+}
 
 // Below these container widths, dragging/resizing a 12-column grid on a
 // touchscreen is fiddly and the columns get too narrow to be useful -- so
@@ -110,7 +117,7 @@ const WIDGET_FACTORY: Record<WidgetId, (onRemove: () => void) => React.ReactNode
   system: (onRemove) => <SystemWidget onRemove={onRemove} />,
   news: (onRemove) => <NewsWidget onRemove={onRemove} />,
   calculator: (onRemove) => <CalculatorWidget onRemove={onRemove} />,
-  pet: (onRemove) => <PetWidget onRemove={onRemove} />,
+  aquarium: (onRemove) => <AquariumWidget onRemove={onRemove} />,
   usageLimits: (onRemove) => <UsageLimitsWidget onRemove={onRemove} />,
   trips: (onRemove) => <TripsWidget onRemove={onRemove} />,
 };
@@ -148,7 +155,7 @@ export default function DashboardGrid() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [pickerOpen]);
 
-  const items = useMemo(() => layout ?? DEFAULT_LAYOUT, [layout]);
+  const items = useMemo(() => migrateLayout(layout ?? DEFAULT_LAYOUT), [layout]);
 
   const breakpoint = width < PHONE_BREAKPOINT ? "phone" : width < TABLET_BREAKPOINT ? "tablet" : "desktop";
 
@@ -162,7 +169,7 @@ export default function DashboardGrid() {
   };
 
   const resetLayout = () => {
-    setLayout(savedDefault ?? DEFAULT_LAYOUT);
+    setLayout(migrateLayout(savedDefault ?? DEFAULT_LAYOUT));
   };
 
   const saveAsDefault = () => {

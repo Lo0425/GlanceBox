@@ -12,7 +12,7 @@ const ALLOWED_KEYS = new Set([
   "todos",
   "notes",
   "events",
-  "pet",
+  "aquarium",
   "trips",
   "assignments",
   "claudeUsage",

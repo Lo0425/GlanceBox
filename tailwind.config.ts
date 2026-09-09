@@ -57,12 +57,18 @@ const config: Config = {
           "20%": { opacity: "1" },
           "100%": { transform: "translateY(-14px)", opacity: "0" },
         },
+        bubbleRise: {
+          "0%": { transform: "translateY(0) scale(0.7)", opacity: "0" },
+          "15%": { opacity: "0.8" },
+          "100%": { transform: "translateY(-90px) scale(1)", opacity: "0" },
+        },
       },
       animation: {
         "pulse-glow": "pulseGlow 2.2s ease-in-out infinite",
         scan: "scan 6s linear infinite",
         "idle-bob": "idleBob 2.2s ease-in-out infinite",
         "sleep-float": "sleepFloat 2.4s ease-in-out infinite",
+        "bubble-rise": "bubbleRise 3.4s ease-in infinite",
       },
     },
   },

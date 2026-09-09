@@ -106,28 +106,33 @@ function AddLegForm({ onAdd }: { onAdd: (leg: Omit<FlightLeg, "id">) => void }) 
         <input value={from} onChange={(e) => setFrom(e.target.value)} placeholder="From" className={`flex-1 min-w-0 ${smallInputClass}`} />
         <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="To" className={`flex-1 min-w-0 ${smallInputClass}`} />
       </div>
-      <div className="flex gap-1.5">
+      {/* flex-wrap + a real min-width per input -- a native date/time control
+          needs room to render its own text without clipping, so cramming all
+          three plus the Add button onto one row (as min-w-0 previously
+          allowed) squeezed them below that and cut off their contents on
+          narrow screens. Wrapping to a second line beats that. */}
+      <div className="flex flex-wrap gap-1.5">
         <input
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className={`flex-[1.3] min-w-0 ${smallInputClass}`}
+          className={`flex-1 min-w-[132px] ${smallInputClass}`}
         />
         <input
           type="time"
           value={departTime}
           onChange={(e) => setDepartTime(e.target.value)}
           title="Departure time"
-          className={`flex-1 min-w-0 ${smallInputClass}`}
+          className={`flex-1 min-w-[104px] ${smallInputClass}`}
         />
         <input
           type="time"
           value={arriveTime}
           onChange={(e) => setArriveTime(e.target.value)}
           title="Arrival time"
-          className={`flex-1 min-w-0 ${smallInputClass}`}
+          className={`flex-1 min-w-[104px] ${smallInputClass}`}
         />
-        <button onClick={submit} className={addButtonClass}>
+        <button onClick={submit} className={`${addButtonClass} flex-1`}>
           Add
         </button>
       </div>
@@ -236,11 +241,19 @@ function TripsTab({
               {expanded && (
                 <div className="flex flex-col gap-1 pb-2">
                   {sortedLegs.map((leg) => (
-                    <div key={leg.id} className="group flex items-center gap-2 pl-6 pr-3 text-[11px] text-faint font-mono">
-                      <span className="text-cyan shrink-0">{leg.from}</span>
-                      <span className="shrink-0">→</span>
-                      <span className="text-cyan shrink-0">{leg.to}</span>
-                      <span className="flex-1 min-w-0 truncate">{formatLeg(leg.date, leg.departTime, leg.arriveTime)}</span>
+                    <div key={leg.id} className="group flex items-center gap-2 pl-6 pr-3">
+                      <div className="flex-1 min-w-0 text-[11px] font-mono">
+                        <div className="truncate">
+                          <span className="text-cyan">{leg.from}</span>
+                          <span className="text-faint"> → </span>
+                          <span className="text-cyan">{leg.to}</span>
+                        </div>
+                        {/* Its own line, full row width -- the departure/arrival
+                            time is the whole point of this row, so it must
+                            never share space with (and get truncated behind)
+                            the from/to labels above. */}
+                        <div className="text-faint">{formatLeg(leg.date, leg.departTime, leg.arriveTime)}</div>
+                      </div>
                       <button
                         onClick={() => removeLeg(t.id, leg.id)}
                         className="text-faint hover:text-warn opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
