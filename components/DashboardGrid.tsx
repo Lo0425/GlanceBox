@@ -5,7 +5,8 @@ import { useAuth } from "@/components/AuthProvider";
 import GridLayout, { Layout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import type { LayoutItem, WidgetId } from "@/lib/types";
+import type { LayoutItem, ThemeId, WidgetId } from "@/lib/types";
+import { DEFAULT_THEME, THEMES } from "@/lib/themes";
 import ClockWidget from "@/components/widgets/ClockWidget";
 import DateWidget from "@/components/widgets/DateWidget";
 import WeatherWidget from "@/components/widgets/WeatherWidget";
@@ -21,6 +22,7 @@ import UsageLimitsWidget from "@/components/widgets/UsageLimitsWidget";
 import TripsWidget from "@/components/widgets/TripsWidget";
 import UserMenu from "@/components/UserMenu";
 import { useUserStorage } from "@/components/useUserStorage";
+import { useClickOutside } from "@/components/useClickOutside";
 
 const LEGACY_STORAGE_KEY = "console-dashboard-layout-v1";
 
@@ -126,6 +128,7 @@ export default function DashboardGrid() {
   const { user } = useAuth();
   const [layout, setLayout] = useUserStorage<LayoutItem[]>("layout", DEFAULT_LAYOUT, LEGACY_STORAGE_KEY);
   const [savedDefault, setSavedDefault] = useUserStorage<LayoutItem[] | null>("defaultLayout", null);
+  const [theme, setTheme] = useUserStorage<ThemeId>("theme", DEFAULT_THEME);
   const [justSaved, setJustSaved] = useState(false);
   // DashboardGrid only ever mounts client-side (app/page.tsx gates it behind
   // Firebase auth, which always starts in a "loading" state server-side), so
@@ -134,6 +137,8 @@ export default function DashboardGrid() {
   const [width, setWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1200));
   const [pickerOpen, setPickerOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const [themePickerOpen, setThemePickerOpen] = useState(false);
+  const themePickerRef = useRef<HTMLDivElement>(null);
 
   const dashboardTitle = user?.name ? `${user.name}'s Dashboard` : "Dashboard";
 
@@ -144,16 +149,16 @@ export default function DashboardGrid() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  useClickOutside(pickerRef, () => setPickerOpen(false), pickerOpen);
+  useClickOutside(themePickerRef, () => setThemePickerOpen(false), themePickerOpen);
+
+  // The whole page's colors are CSS variables keyed off this attribute (see
+  // app/globals.css) -- applying it to <html> means it's in scope for
+  // everything, including the fixed-position body background glow that sits
+  // behind (not inside) this component's own tree.
   useEffect(() => {
-    if (!pickerOpen) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        setPickerOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [pickerOpen]);
+    document.documentElement.dataset.theme = theme ?? DEFAULT_THEME;
+  }, [theme]);
 
   const items = useMemo(() => migrateLayout(layout ?? DEFAULT_LAYOUT), [layout]);
 
@@ -211,6 +216,40 @@ export default function DashboardGrid() {
           </h1>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative" ref={themePickerRef}>
+            <button
+              onClick={() => setThemePickerOpen((v) => !v)}
+              className="text-xs font-mono text-muted hover:text-cyan border border-hairline hover:border-cyan/50 rounded-lg px-3 py-1.5 transition-all duration-200 hover:shadow-glow-cyan"
+            >
+              Theme
+            </button>
+            {themePickerOpen && (
+              <div className="absolute right-0 mt-2 w-64 max-w-[80vw] rounded-lg border border-hairline bg-surface/95 backdrop-blur-md shadow-glow-cyan overflow-hidden z-10">
+                {THEMES.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      setTheme(t.id);
+                      setThemePickerOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2.5 text-left px-3 py-2 text-sm transition-colors ${
+                      (theme ?? DEFAULT_THEME) === t.id ? "bg-surfaceRaised text-cyan" : "text-ink hover:bg-surfaceRaised hover:text-cyan"
+                    }`}
+                  >
+                    <span className="flex gap-0.5 shrink-0">
+                      {t.swatch.map((hex, i) => (
+                        <span key={i} className="w-2 h-2 rounded-full" style={{ backgroundColor: hex }} />
+                      ))}
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{t.label}</span>
+                      <span className="block text-[11px] text-faint truncate">{t.description}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="relative" ref={pickerRef}>
             <button
               onClick={() => setPickerOpen((v) => !v)}

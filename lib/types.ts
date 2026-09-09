@@ -13,6 +13,8 @@ export type WidgetId =
   | "usageLimits"
   | "trips";
 
+export type ThemeId = "terminal" | "colorful" | "sakura" | "futuristic" | "ocean" | "sunset" | "panda";
+
 export interface LayoutItem {
   i: WidgetId;
   x: number;

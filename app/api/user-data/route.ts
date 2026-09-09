@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 const ALLOWED_KEYS = new Set([
   "layout",
   "defaultLayout",
+  "theme",
   "todos",
   "notes",
   "events",

@@ -8,34 +8,153 @@
   --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
+/* Theme palettes -- each variable is "R G B" (space-separated, no commas) so
+   Tailwind's `rgb(var(--x) / <alpha-value>)` color definitions (see
+   tailwind.config.ts) can apply opacity modifiers like `bg-cyan/10`.
+   `[data-theme]` lives on <html>, set by DashboardGrid from the user's saved
+   preference; :root holds the default (terminal) so anything rendered before
+   that preference loads (or a user who never picked one) still looks right. */
+:root,
+[data-theme="terminal"] {
+  --color-base: 20 22 26;
+  --color-surface: 28 31 37;
+  --color-surfaceRaised: 34 38 46;
+  --color-hairline: 43 47 55;
+  --color-ink: 236 237 239;
+  --color-muted: 138 143 152;
+  --color-faint: 136 143 160;
+  --color-amber: 232 163 61;
+  --color-amberDim: 138 100 40;
+  --color-good: 95 191 139;
+  --color-warn: 224 104 90;
+  --color-cyan: 79 224 214;
+  --color-violet: 139 124 240;
+}
+
+[data-theme="colorful"] {
+  --color-base: 22 18 31;
+  --color-surface: 32 26 46;
+  --color-surfaceRaised: 42 34 64;
+  --color-hairline: 61 50 85;
+  --color-ink: 245 240 255;
+  --color-muted: 169 159 199;
+  --color-faint: 155 143 194;
+  --color-amber: 255 159 67;
+  --color-amberDim: 180 113 31;
+  --color-good: 74 222 128;
+  --color-warn: 255 77 141;
+  --color-cyan: 34 211 238;
+  --color-violet: 192 132 252;
+}
+
+[data-theme="sakura"] {
+  --color-base: 253 243 246;
+  --color-surface: 255 255 255;
+  --color-surfaceRaised: 252 233 239;
+  --color-hairline: 240 191 206;
+  --color-ink: 74 46 54;
+  --color-muted: 156 107 120;
+  --color-faint: 185 138 150;
+  --color-amber: 232 160 92;
+  --color-amberDim: 185 122 62;
+  --color-good: 127 184 143;
+  --color-warn: 224 96 122;
+  --color-cyan: 244 114 182;
+  --color-violet: 201 159 224;
+}
+
+[data-theme="futuristic"] {
+  --color-base: 10 14 23;
+  --color-surface: 16 20 31;
+  --color-surfaceRaised: 22 27 43;
+  --color-hairline: 35 42 64;
+  --color-ink: 232 241 255;
+  --color-muted: 124 137 184;
+  --color-faint: 107 122 168;
+  --color-amber: 255 210 63;
+  --color-amberDim: 156 122 31;
+  --color-good: 57 255 136;
+  --color-warn: 255 51 85;
+  --color-cyan: 0 240 255;
+  --color-violet: 176 38 255;
+}
+
+[data-theme="ocean"] {
+  --color-base: 11 27 38;
+  --color-surface: 16 37 48;
+  --color-surfaceRaised: 22 48 61;
+  --color-hairline: 35 65 82;
+  --color-ink: 228 243 247;
+  --color-muted: 127 163 176;
+  --color-faint: 111 151 166;
+  --color-amber: 227 168 87;
+  --color-amberDim: 138 107 52;
+  --color-good: 79 209 165;
+  --color-warn: 232 93 93;
+  --color-cyan: 47 184 206;
+  --color-violet: 108 127 224;
+}
+
+[data-theme="sunset"] {
+  --color-base: 28 18 32;
+  --color-surface: 36 23 38;
+  --color-surfaceRaised: 47 29 48;
+  --color-hairline: 74 45 66;
+  --color-ink: 252 238 232;
+  --color-muted: 195 154 158;
+  --color-faint: 185 139 148;
+  --color-amber: 255 148 72;
+  --color-amberDim: 161 90 38;
+  --color-good: 95 191 160;
+  --color-warn: 232 69 91;
+  --color-cyan: 255 111 145;
+  --color-violet: 193 95 209;
+}
+
+[data-theme="panda"] {
+  --color-base: 245 245 242;
+  --color-surface: 255 255 255;
+  --color-surfaceRaised: 236 235 230;
+  --color-hairline: 217 215 207;
+  --color-ink: 30 30 30;
+  --color-muted: 110 108 103;
+  --color-faint: 141 139 132;
+  --color-amber: 217 164 65;
+  --color-amberDim: 143 112 29;
+  --color-good: 92 184 92;
+  --color-warn: 214 69 69;
+  --color-cyan: 63 143 110;
+  --color-violet: 232 135 154;
+}
+
 html,
 body {
   height: 100%;
 }
 
 body {
-  background-color: #14161A;
+  background-color: rgb(var(--color-base));
   background-image:
-    radial-gradient(ellipse 900px 600px at 12% 0%, rgba(79, 224, 214, 0.07), transparent),
-    radial-gradient(ellipse 800px 550px at 100% 100%, rgba(139, 124, 240, 0.06), transparent),
-    linear-gradient(rgba(43, 47, 55, 0.5) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(43, 47, 55, 0.5) 1px, transparent 1px),
-    radial-gradient(circle, #262a32 1.2px, transparent 1.2px);
+    radial-gradient(ellipse 900px 600px at 12% 0%, rgb(var(--color-cyan) / 0.07), transparent),
+    radial-gradient(ellipse 800px 550px at 100% 100%, rgb(var(--color-violet) / 0.06), transparent),
+    linear-gradient(rgb(var(--color-hairline) / 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--color-hairline) / 0.5) 1px, transparent 1px),
+    radial-gradient(circle, rgb(var(--color-hairline)) 1.2px, transparent 1.2px);
   /* The two glow layers are viewport-fixed, not document-fixed, so they stay
      anchored to the screen corners instead of landing at some percentage of
      the (unbounded, growable) page height and creating a visible edge. */
   background-attachment: fixed, fixed, scroll, scroll, scroll;
   background-size: auto, auto, 96px 96px, 96px 96px, 24px 24px;
-  color: #ECEDEF;
+  color: rgb(var(--color-ink));
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #4a5563 transparent;
+  scrollbar-color: rgb(var(--color-faint) / 0.6) transparent;
 }
 
 :focus-visible {
-  outline: 2px solid #4FE0D6;
+  outline: 2px solid rgb(var(--color-cyan));
   outline-offset: 2px;
 }
 
@@ -54,9 +173,9 @@ body {
 
 /* react-grid-layout structural overrides so it fits the control-panel look */
 .react-grid-item.react-grid-placeholder {
-  background: #4FE0D6 !important;
+  background: rgb(var(--color-cyan)) !important;
   opacity: 0.1 !important;
-  border: 1px dashed rgba(79, 224, 214, 0.5);
+  border: 1px dashed rgb(var(--color-cyan) / 0.5);
   border-radius: 14px;
 }
 
@@ -68,8 +187,8 @@ body {
 }
 
 .react-grid-item > .react-resizable-handle::after {
-  border-right: 2px solid #5B606A;
-  border-bottom: 2px solid #5B606A;
+  border-right: 2px solid rgb(var(--color-faint));
+  border-bottom: 2px solid rgb(var(--color-faint));
   right: 5px;
   bottom: 5px;
   width: 7px;
@@ -82,7 +201,7 @@ body {
 
 .react-grid-item.react-draggable-dragging {
   z-index: 20;
-  box-shadow: 0 0 0 1px rgba(79, 224, 214, 0.4), 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 32px rgba(79, 224, 214, 0.15);
+  box-shadow: 0 0 0 1px rgb(var(--color-cyan) / 0.4), 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 32px rgb(var(--color-cyan) / 0.15);
 }
 
 @media (prefers-reduced-motion: reduce) {

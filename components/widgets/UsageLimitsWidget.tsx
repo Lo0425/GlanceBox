@@ -22,7 +22,7 @@ const SEVERITY: Record<Severity, { fill: string; track: string; text: string; gl
     fill: "bg-good",
     track: "bg-good/15",
     text: "text-good",
-    glow: "shadow-[0_0_14px_rgba(95,191,139,0.35)]",
+    glow: "shadow-[0_0_14px_rgb(var(--color-good)/0.35)]",
     label: "Normal",
   },
   amber: {
@@ -36,7 +36,7 @@ const SEVERITY: Record<Severity, { fill: string; track: string; text: string; gl
     fill: "bg-warn",
     track: "bg-warn/15",
     text: "text-warn",
-    glow: "shadow-[0_0_14px_rgba(224,104,90,0.4)]",
+    glow: "shadow-[0_0_14px_rgb(var(--color-warn)/0.4)]",
     label: "Near limit",
   },
 };

@@ -7,20 +7,28 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // Each color resolves through a CSS variable (defined per-theme in
+      // globals.css, keyed off a `data-theme` attribute on <html>) instead of
+      // a fixed hex value -- this is what lets every widget's existing
+      // `bg-surface` / `text-cyan` / `border-hairline` / etc. classes repaint
+      // for a different theme with zero changes to the components using
+      // them. The `rgb(var(...) / <alpha-value>)` form (channels stored as
+      // "R G B", not a hex string) is what preserves opacity-modifier syntax
+      // like `bg-cyan/10` or `border-hairline/50`.
       colors: {
-        base: "#14161A",
-        surface: "#1C1F25",
-        surfaceRaised: "#22262E",
-        hairline: "#2B2F37",
-        ink: "#ECEDEF",
-        muted: "#8A8F98",
-        faint: "#888FA0",
-        amber: "#E8A33D",
-        amberDim: "#8A6428",
-        good: "#5FBF8B",
-        warn: "#E0685A",
-        cyan: "#4FE0D6",
-        violet: "#8B7CF0",
+        base: "rgb(var(--color-base) / <alpha-value>)",
+        surface: "rgb(var(--color-surface) / <alpha-value>)",
+        surfaceRaised: "rgb(var(--color-surfaceRaised) / <alpha-value>)",
+        hairline: "rgb(var(--color-hairline) / <alpha-value>)",
+        ink: "rgb(var(--color-ink) / <alpha-value>)",
+        muted: "rgb(var(--color-muted) / <alpha-value>)",
+        faint: "rgb(var(--color-faint) / <alpha-value>)",
+        amber: "rgb(var(--color-amber) / <alpha-value>)",
+        amberDim: "rgb(var(--color-amberDim) / <alpha-value>)",
+        good: "rgb(var(--color-good) / <alpha-value>)",
+        warn: "rgb(var(--color-warn) / <alpha-value>)",
+        cyan: "rgb(var(--color-cyan) / <alpha-value>)",
+        violet: "rgb(var(--color-violet) / <alpha-value>)",
       },
       fontFamily: {
         display: ["var(--font-display)", "sans-serif"],
@@ -29,15 +37,15 @@ const config: Config = {
       },
       backgroundImage: {
         dotgrid:
-          "radial-gradient(circle, #2B2F37 1px, transparent 1px)",
+          "radial-gradient(circle, rgb(var(--color-hairline)) 1px, transparent 1px)",
       },
       backgroundSize: {
         dotgrid: "22px 22px",
       },
       boxShadow: {
-        "glow-amber": "0 0 0 1px rgba(232,163,61,0.35), 0 0 24px rgba(232,163,61,0.18)",
-        "glow-cyan": "0 0 0 1px rgba(79,224,214,0.35), 0 0 24px rgba(79,224,214,0.18)",
-        "glow-sm": "0 0 12px rgba(232,163,61,0.25)",
+        "glow-amber": "0 0 0 1px rgb(var(--color-amber) / 0.35), 0 0 24px rgb(var(--color-amber) / 0.18)",
+        "glow-cyan": "0 0 0 1px rgb(var(--color-cyan) / 0.35), 0 0 24px rgb(var(--color-cyan) / 0.18)",
+        "glow-sm": "0 0 12px rgb(var(--color-amber) / 0.25)",
       },
       keyframes: {
         pulseGlow: {

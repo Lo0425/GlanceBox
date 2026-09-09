@@ -22,7 +22,7 @@ export default function ClockWidget({ onRemove }: { onRemove?: () => void }) {
   return (
     <WidgetCard eyebrow="Local time" title="Clock" onRemove={onRemove}>
       <div className="h-full flex flex-col justify-center items-start gap-2">
-        <div className="font-mono font-bold text-ink leading-none tabular-nums text-[clamp(2rem,6vw,4.2rem)] drop-shadow-[0_0_20px_rgba(79,224,214,0.15)]">
+        <div className="font-mono font-bold text-ink leading-none tabular-nums text-[clamp(2rem,6vw,4.2rem)] drop-shadow-[0_0_20px_rgb(var(--color-cyan)/0.15)]">
           {hh}
           <span className="text-cyan">:</span>
           {mm}

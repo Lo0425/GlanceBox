@@ -47,7 +47,7 @@ export default function PomodoroWidget({ onRemove }: { onRemove?: () => void }) 
         </div>
         <div
           className={`font-mono font-bold text-ink leading-none tabular-nums text-[clamp(2rem,6vw,3.6rem)] transition-[filter] ${
-            running ? (mode === "work" ? "drop-shadow-[0_0_18px_rgba(232,163,61,0.35)]" : "drop-shadow-[0_0_18px_rgba(95,191,139,0.35)]") : ""
+            running ? (mode === "work" ? "drop-shadow-[0_0_18px_rgb(var(--color-amber)/0.35)]" : "drop-shadow-[0_0_18px_rgb(var(--color-good)/0.35)]") : ""
           }`}
         >
           {mm}:{ss}
@@ -64,7 +64,7 @@ export default function PomodoroWidget({ onRemove }: { onRemove?: () => void }) 
             className={`text-xs font-mono text-ink border rounded-lg px-3 py-1.5 transition-all duration-200 ${
               mode === "work"
                 ? "border-amber/50 hover:shadow-glow-amber"
-                : "border-good/50 hover:shadow-[0_0_0_1px_rgba(95,191,139,0.35),0_0_24px_rgba(95,191,139,0.18)]"
+                : "border-good/50 hover:shadow-[0_0_0_1px_rgb(var(--color-good)/0.35),0_0_24px_rgb(var(--color-good)/0.18)]"
             }`}
           >
             {running ? "Pause" : "Start"}
